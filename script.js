@@ -212,7 +212,7 @@ function init(img) {
             zip.generateAsync({
               type: "blob"
             }).then(function(blob) {
-              saveAs(blob, "gr" + (new Date().getTime()) + ".zip");
+              saveAs(blob, "petaviron" + (new Date().getTime()) + ".zip");
             });
           });
         }
