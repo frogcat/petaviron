@@ -7,12 +7,28 @@
   <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+  <style>
+    #header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: auto;
+      background: rgba(0, 0, 0, 0.75);
+      color: white;
+      z-index: 2000;
+      text-align: center;
+    }
+  </style>
 </head>
 
 <body>
   <div id="map" style="position:absolute;top:0;left:0;bottom:0;right:0;"></div>
+  <div id="header">now loading</div>
   <script>
     fetch("tilejson.json").then(a => a.json()).then(tilejson => {
+
+      document.getElementById("header").innerHTML = decodeURIComponent(new URL(tilejson.tiles[0], location.href).toString());
 
       var bounds = L.latLngBounds(
         L.latLng(tilejson.bounds[1], tilejson.bounds[0]),
@@ -22,6 +38,8 @@
       var map = L.map("map", {
         maxZoom: tilejson.maxzoom + 2
       }).fitBounds(bounds);
+
+      map.zoomControl.setPosition("bottomright");
 
       L.tileLayer(tilejson.tiles[0], {
         maxZoom: tilejson.maxzoom + 2,
