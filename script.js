@@ -76,23 +76,28 @@ function init(img) {
     var dst = src.multiplyBy(Math.min(size.x / src.x * 0.8, size.y / src.y * 0.8, 1));
     var c = size.divideBy(2);
     var d = dst.divideBy(2);
-    return [
-      [0, 0, c.x - d.x, c.y - d.y],
-      [src.x, 0, c.x + d.x, c.y - d.y],
-      [src.x, src.y, c.x + d.x, c.y + d.y],
-      [0, src.y, c.x - d.x, c.y + d.y]
-    ];
+    return [{
+      imagePoint: L.point(0, 0),
+      latlng: map.containerPointToLatLng(L.point(c.x - d.x, c.y - d.y))
+    }, {
+      imagePoint: L.point(src.x, 0),
+      latlng: map.containerPointToLatLng(L.point(c.x + d.x, c.y - d.y))
+    }, {
+      imagePoint: L.point(src.x, src.y),
+      latlng: map.containerPointToLatLng(L.point(c.x + d.x, c.y + d.y))
+    }, {
+      imagePoint: L.point(0, src.y),
+      latlng: map.containerPointToLatLng(L.point(c.x - d.x, c.y + d.y))
+    }];
   })();
 
   var markerGroup = L.featureGroup([]).addTo(map);
-  var canvasOverlay = L.canvasOverlay({
+  var overlay = L.imageOverlay.gcp(img, initialControlPoints, {
     opacity: $("#opacity").val()
   }).addTo(map);
 
-  var context = canvasOverlay.getCanvas().getContext("morph");
-
-  canvasOverlay.on("click", function(e) {
-    var p = context.getTexturePointAt(e.containerPoint.x, e.containerPoint.y);
+  overlay.on("click", function(e) {
+    var p = overlay.containerPointToImagePoint(e.containerPoint);
     if (p === null) return;
 
     var button = document.createElement("button");
@@ -100,7 +105,7 @@ function init(img) {
     button.appendChild(document.createTextNode("Click to remove"));
     var me = L.marker(e.latlng, {
       draggable: true,
-      texturePoint: L.point(p[0], p[1])
+      imagePoint: p
     }).bindPopup(button).addTo(markerGroup);
 
     button.addEventListener("click", function() {
@@ -114,13 +119,13 @@ function init(img) {
         markerGroup.fire("change");
       });
     }
-    context.clear();
     var markers = markerGroup.getLayers();
     if (markers.length < 3) return;
-    context.drawImage(img, markers.map(marker => {
-      var p = map.latLngToContainerPoint(marker.getLatLng());
-      var q = marker.options.texturePoint;
-      return [q.x, q.y, p.x, p.y];
+    overlay.setGroundControlPoints(markers.map(marker => {
+      return {
+        latlng: marker.getLatLng(),
+        imagePoint: marker.options.imagePoint
+      };
     }));
   }).addTo(map);
 
@@ -129,14 +134,14 @@ function init(img) {
   });
 
   initialControlPoints.forEach(a => {
-    L.marker(map.containerPointToLatLng([a[2], a[3]]), {
+    L.marker(a.latlng, {
       draggable: true,
-      texturePoint: L.point(a[0], a[1])
+      imagePoint: a.imagePoint
     }).bindPopup("<span class='gr'>drag me</span>").addTo(markerGroup).openPopup();
   });
 
   $("#opacity").on("input", function() {
-    canvasOverlay.setOpacity($(this).val());
+    overlay.setOpacity($(this).val());
     $("#opacityText").text("opacity " + Math.floor(($(this).val() * 100)) + "%");
   }).trigger("input");
 
@@ -195,7 +200,7 @@ function init(img) {
       context.drawImage(img, markerGroup.getLayers().map(marker => {
         var ll = marker.getLatLng();
         var p = L.CRS.EPSG3857.latLngToPoint(ll, origin.z).subtract(origin.multiplyBy(256));
-        var q = marker.options.texturePoint;
+        var q = marker.options.imagePoint;
         return [q.x, q.y, p.x, p.y];
       }));
 
