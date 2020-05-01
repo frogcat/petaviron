@@ -54,14 +54,32 @@ $("#start").on("click", function() {
       return f.type.indexOf("image/") === 0;
     });
     if (!file) return;
-    var image = new Image();
-    image.title = file.name;
-    image.crossOrigin = "anonymous";
-    image.onload = function() {
-      window.URL.revokeObjectURL(image.src);
-      init(image);
-    };
-    image.src = window.URL.createObjectURL(file);
+
+    EXIF.getData(file, function() {
+      var data = EXIF.getAllTags(file);
+      if (data["GPSLatitude"] && data["GPSLongitude"]) {
+        var ll = [
+          data["GPSLatitude"],
+          data["GPSLongitude"]
+        ].map(a => a[0] + a[1] / 60 + a[2] / 3600);
+        if (data["GPSLatitudeRef"] !== "N") ll[0] *= -1;
+        if (data["GPSLongitudeRef"] !== "E") ll[1] *= -1;
+        if (confirm("EXIF GPSLatitude/GPSLongitude found.\n [OK] Set the map view to EXIF location \n [Cancel] Don't change the map view"))
+          map.panTo(ll, {
+            animate: false
+          });
+      }
+
+      var image = new Image();
+      image.title = file.name;
+      image.crossOrigin = "anonymous";
+      image.onload = function() {
+        window.URL.revokeObjectURL(image.src);
+        init(image);
+      };
+      image.src = window.URL.createObjectURL(file);
+    });
+
   }).click();
 });
 
